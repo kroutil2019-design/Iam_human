@@ -10,6 +10,27 @@ DB_IMAGE="postgres:14"
 
 mkdir -p "$RUN_DIR"
 
+is_api_healthy() {
+  curl -fsS -m 3 http://localhost:4000/health >/dev/null 2>&1
+}
+
+wait_for_api() {
+  local max_attempts="${1:-30}"
+  local attempt=1
+
+  while [[ "$attempt" -le "$max_attempts" ]]; do
+    if is_api_healthy; then
+      echo "[dev-up] API is healthy"
+      return 0
+    fi
+    sleep 0.5
+    attempt=$((attempt + 1))
+  done
+
+  echo "[dev-up] API health check failed after startup" >&2
+  return 1
+}
+
 ensure_postgres() {
   if ! command -v docker >/dev/null 2>&1; then
     echo "Error: docker is required for deterministic local PostgreSQL." >&2
@@ -87,8 +108,14 @@ start_process() {
     local old_pid
     old_pid="$(cat "$pid_file")"
     if [[ -n "$old_pid" ]] && kill -0 "$old_pid" 2>/dev/null; then
-      echo "[dev-up] $name already running (pid=$old_pid)"
-      return
+      if [[ "$name" == "api" ]] && ! is_api_healthy; then
+        echo "[dev-up] API tracked process is unhealthy; restarting (pid=$old_pid)"
+        kill "$old_pid" 2>/dev/null || true
+        rm -f "$pid_file"
+      else
+        echo "[dev-up] $name already running (pid=$old_pid)"
+        return
+      fi
     fi
     rm -f "$pid_file"
   fi
@@ -106,6 +133,7 @@ ensure_api_env
 ensure_api_port_available
 run_migration
 start_process "api" "npm run dev" "$API_DIR"
+wait_for_api
 start_process "web" "npm run dev" "$WEB_DIR"
 
 echo "[dev-up] Done"
