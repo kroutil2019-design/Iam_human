@@ -1,6 +1,5 @@
 package com.iamhuman.app.ui.screens
 
-import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts

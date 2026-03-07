@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import rateLimit from 'express-rate-limit';
@@ -59,6 +59,13 @@ app.use('/admin', generalLimiter, adminRouter);
 // Health check
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Global async error handler — catches errors thrown/rejected in route handlers
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('[Error]', err.message);
+  res.status(500).json({ success: false, error: 'Internal server error' });
 });
 
 export default app;
