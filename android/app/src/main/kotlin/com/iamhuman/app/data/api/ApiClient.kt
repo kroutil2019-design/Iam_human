@@ -10,7 +10,11 @@ import java.util.concurrent.TimeUnit
 
 object ApiClient {
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = if (BuildConfig.DEBUG) {
+            HttpLoggingInterceptor.Level.BODY
+        } else {
+            HttpLoggingInterceptor.Level.NONE
+        }
     }
 
     fun build(tokenStore: TokenStore? = null): ApiService {

@@ -97,9 +97,10 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
 
   // Issue JWT
   const secret = process.env.JWT_SECRET ?? '';
+  const jwtExpiry = process.env.JWT_EXPIRY ?? '7d';
   const authToken = jwt.sign({ userId }, secret, {
-    expiresIn: (process.env.JWT_EXPIRY as jwt.SignOptions['expiresIn']) ?? '7d',
-  });
+    expiresIn: jwtExpiry,
+  } as jwt.SignOptions);
 
   res.json({ success: true, user_id: userId, auth_token: authToken });
 });
