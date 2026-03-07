@@ -10,7 +10,9 @@ data class VerifyOtpBody(
     @SerializedName("device_id") val deviceId: String,
 )
 
-data class SuccessResponse(val success: Boolean)
+data class SuccessResponse(
+    val success: Boolean,
+)
 
 data class VerifyOtpResponse(
     val success: Boolean,

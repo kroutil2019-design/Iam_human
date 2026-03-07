@@ -30,6 +30,7 @@ import com.google.zxing.qrcode.QRCodeWriter
 import com.iamhuman.app.data.api.ApiService
 import com.iamhuman.app.data.models.ProofData
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 @Composable
 fun ProofScreen(
@@ -40,6 +41,7 @@ fun ProofScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var proof by remember { mutableStateOf<ProofData?>(null) }
+    var selfieUploaded by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     var toastMsg by remember { mutableStateOf("") }
@@ -52,6 +54,11 @@ fun ProofScreen(
                 val res = api.getCurrentProof()
                 if (res.isSuccessful) proof = res.body()?.proof
                 else error = "Failed to load proof"
+
+                val meRes = api.getMe()
+                if (meRes.isSuccessful) {
+                    selfieUploaded = meRes.body()?.user?.selfieUploaded == true
+                }
             } catch (e: Exception) {
                 error = "Network error: ${e.message}"
             } finally {
@@ -128,6 +135,7 @@ fun ProofScreen(
                 )
             } else {
                 NotVerifiedCard(
+                    selfieUploaded = selfieUploaded,
                     onRefresh = { loadProof() },
                     onIssue = {
                         scope.launch {
@@ -135,7 +143,15 @@ fun ProofScreen(
                             try {
                                 val res = api.issueProof()
                                 if (res.isSuccessful) proof = res.body()?.proof
-                                else error = "Not verified yet. Complete email verification first."
+                                else {
+                                    val backendError = try {
+                                        val raw = res.errorBody()?.string().orEmpty()
+                                        if (raw.isBlank()) null else JSONObject(raw).optString("error").ifBlank { null }
+                                    } catch (_: Exception) {
+                                        null
+                                    }
+                                    error = backendError ?: "Verification incomplete. Upload a selfie first."
+                                }
                             } catch (e: Exception) {
                                 error = "Error: ${e.message}"
                             } finally {
@@ -247,6 +263,7 @@ private fun VerifiedCard(
 
 @Composable
 private fun NotVerifiedCard(
+    selfieUploaded: Boolean,
     onRefresh: () -> Unit,
     onIssue: () -> Unit,
     onSelfie: () -> Unit,
@@ -270,26 +287,32 @@ private fun NotVerifiedCard(
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                "Complete verification to\nget your Human Proof Token",
+                if (selfieUploaded) {
+                    "Selfie uploaded. Issue your Human Proof Token."
+                } else {
+                    "Upload a selfie to complete\nhuman verification"
+                },
                 fontSize = 14.sp,
                 color = Color(0xFF8888A0),
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(24.dp))
-            Button(
-                onClick = onIssue,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3D7FFF)),
-            ) {
-                Text("Issue Proof", fontWeight = FontWeight.SemiBold)
-            }
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = onSelfie,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF3D7FFF)),
-            ) {
-                Text("Upload Selfie")
+            if (selfieUploaded) {
+                Button(
+                    onClick = onIssue,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3D7FFF)),
+                ) {
+                    Text("Issue Proof", fontWeight = FontWeight.SemiBold)
+                }
+            } else {
+                OutlinedButton(
+                    onClick = onSelfie,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF3D7FFF)),
+                ) {
+                    Text("Upload Selfie")
+                }
             }
             Spacer(Modifier.height(8.dp))
             TextButton(onClick = onRefresh) {

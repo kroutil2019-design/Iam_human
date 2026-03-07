@@ -13,8 +13,15 @@ export default function Dashboard({ adminKey, onLogout }: Props) {
   const [users, setUsers] = useState<User[]>([]);
   const [proofs, setProofs] = useState<Proof[]>([]);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [verificationFilter, setVerificationFilter] = useState('all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const getVerificationState = (user: User): 'incomplete' | 'email_only' | 'selfie_verified' => {
+    if (user.selfie_uploaded && user.verified_basic) return 'selfie_verified';
+    if (user.verified_basic && !user.selfie_uploaded) return 'email_only';
+    return 'incomplete';
+  };
 
   const loadUsers = async () => {
     setLoading(true);
@@ -61,6 +68,11 @@ export default function Dashboard({ adminKey, onLogout }: Props) {
   const filteredProofs =
     statusFilter === 'all' ? proofs : proofs.filter((p) => p.status === statusFilter);
 
+  const filteredUsers =
+    verificationFilter === 'all'
+      ? users
+      : users.filter((u) => getVerificationState(u) === verificationFilter);
+
   return (
     <div className="dashboard">
       <header className="dash-header">
@@ -92,37 +104,66 @@ export default function Dashboard({ adminKey, onLogout }: Props) {
       {loading && <div className="dash-loading">Loading…</div>}
 
       {tab === 'users' && !loading && (
-        <div className="table-wrapper">
+        <>
+          <div className="filter-bar">
+            <label className="filter-label">Verification:</label>
+            <select
+              className="filter-select"
+              value={verificationFilter}
+              onChange={(e) => setVerificationFilter(e.target.value)}
+            >
+              <option value="all">All</option>
+              <option value="selfie_verified">Selfie Verified</option>
+              <option value="email_only">Email Only</option>
+              <option value="incomplete">Incomplete</option>
+            </select>
+          </div>
+          <div className="table-wrapper">
           <table className="data-table">
             <thead>
               <tr>
                 <th>Email</th>
                 <th>Status</th>
-                <th>Verified</th>
+                <th>Verification</th>
+                <th>Email</th>
                 <th>Selfie</th>
                 <th>Created</th>
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
+              {filteredUsers.map((u) => {
+                const verificationState = getVerificationState(u);
+                const verificationLabel =
+                  verificationState === 'selfie_verified'
+                    ? 'Selfie Verified'
+                    : verificationState === 'email_only'
+                      ? 'Email Only'
+                      : 'Incomplete';
+
+                return (
                 <tr key={u.id}>
                   <td>{u.email}</td>
                   <td>
                     <span className={`badge badge-${u.status}`}>{u.status}</span>
                   </td>
+                  <td>
+                    <span className={`badge badge-${verificationState}`}>{verificationLabel}</span>
+                  </td>
                   <td>{u.verified_basic ? '✓' : '—'}</td>
                   <td>{u.selfie_uploaded ? '✓' : '—'}</td>
                   <td>{new Date(u.created_at).toLocaleString()}</td>
                 </tr>
-              ))}
-              {users.length === 0 && (
+                );
+              })}
+              {filteredUsers.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="empty-cell">No users yet</td>
+                  <td colSpan={6} className="empty-cell">No users found</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {tab === 'proofs' && !loading && (

@@ -1,8 +1,7 @@
 import 'dotenv/config';
 import app from './app';
+import { env } from './config/env';
 
-const PORT = parseInt(process.env.PORT ?? '4000', 10);
-
-app.listen(PORT, () => {
-  console.log(`[IAmHuman API] Listening on http://localhost:${PORT}`);
+app.listen(env.port, () => {
+  console.log(`[IAmHuman API] Listening on http://localhost:${env.port}`);
 });

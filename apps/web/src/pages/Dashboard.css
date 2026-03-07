@@ -168,6 +168,21 @@
   color: var(--text-dim);
 }
 
+.badge-selfie_verified {
+  background: rgba(68, 255, 153, 0.15);
+  color: var(--success);
+}
+
+.badge-email_only {
+  background: rgba(61, 127, 255, 0.2);
+  color: var(--accent);
+}
+
+.badge-incomplete {
+  background: rgba(255, 68, 102, 0.15);
+  color: var(--danger);
+}
+
 .badge-deleted {
   background: rgba(255, 68, 102, 0.15);
   color: var(--danger);

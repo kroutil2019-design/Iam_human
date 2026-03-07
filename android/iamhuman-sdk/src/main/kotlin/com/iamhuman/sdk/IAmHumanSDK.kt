@@ -24,7 +24,7 @@ object IAmHumanSDK {
     private const val IAM_HUMAN_PACKAGE = "com.iamhuman.app"
     private const val PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.iamhuman.app"
 
-    private var baseUrl: String = "http://localhost:4000"
+    private var baseUrl: String = "https://effective-winner-97vgw4grpj963p5xp-4000.app.github.dev"
     private var apiKey: String? = null
     private lateinit var api: SdkApiService
 

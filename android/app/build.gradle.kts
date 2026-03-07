@@ -4,6 +4,12 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val configuredBaseUrl = (
+    (project.findProperty("IAMHUMAN_BASE_URL") as String?)
+        ?: System.getenv("IAMHUMAN_BASE_URL")
+    ?: "https://effective-winner-97vgw4grpj963p5xp-4000.app.github.dev"
+).trimEnd('/')
+
 android {
     namespace = "com.iamhuman.app"
     compileSdk = 34
@@ -15,7 +21,7 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:4000\"")
+        buildConfigField("String", "BASE_URL", "\"$configuredBaseUrl\"")
     }
 
     buildTypes {

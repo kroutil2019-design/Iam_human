@@ -1,6 +1,62 @@
 # I Am Human – Deterministic Human Proof System
 
+[![Deterministic Validate](https://github.com/kroutil2019-design/Iam_human/actions/workflows/deterministic-validate.yml/badge.svg)](https://github.com/kroutil2019-design/Iam_human/actions/workflows/deterministic-validate.yml)
+
 > **Tier-0 Human Proof** – A production-ready system that proves a user is human and issues a reusable Human Proof Token (HPT).
+
+## Deterministic Workflow
+
+From repo root, use the deterministic scripts in this order:
+
+```bash
+./scripts/dev-up.sh
+./scripts/dev-status.sh
+./scripts/dev-test.sh
+./scripts/dev-down.sh
+```
+
+Before opening a PR, run:
+
+```bash
+./scripts/pre-pr-check.sh --fast
+# or CI-parity scope
+./scripts/pre-pr-check.sh --ci
+```
+
+For faster local checks (skip Android build):
+
+```bash
+./scripts/dev-test.sh --skip-android
+```
+
+When to use each mode:
+
+- Use `./scripts/dev-test.sh` for release candidates, CI parity checks, and any Android-related change.
+- Use `./scripts/dev-test.sh --skip-android` for API/web-only edits when you need a faster local loop.
+
+For log tailing and cleanup:
+
+```bash
+./scripts/dev-logs.sh api
+./scripts/dev-logs.sh web
+./scripts/dev-reset.sh
+./scripts/dev-reset.sh --purge
+```
+
+Governance docs:
+
+- Security policy: `SECURITY.md`
+- Release checklist: `release-checklist.md`
+- Changelog: `CHANGELOG.md`
+- Security reporting template: `.github/ISSUE_TEMPLATE/security-report.yml`
+- Bug/feature templates: `.github/ISSUE_TEMPLATE/bug-report.yml`, `.github/ISSUE_TEMPLATE/feature-request.yml`
+
+Release helper:
+
+```bash
+./scripts/release-verify.sh
+./scripts/release-verify.sh --full
+```
 
 ---
 
@@ -114,18 +170,20 @@ The admin console will be available at **http://localhost:5173**.
 
 ### Prerequisites
 - Android Studio Hedgehog or newer
-- JDK 17
+- JDK 17+ (JDK 21 recommended for this repo's Gradle setup)
 - Android SDK with minSdk 24+
 
 ### Setup
 
 1. Open `android/` in Android Studio as the project root.
-2. In `android/app/build.gradle.kts`, set `BASE_URL` to your backend:
-   ```kotlin
-   buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:4000\"")
-   // 10.0.2.2 = localhost from Android emulator
-   // Use your machine's LAN IP for physical devices
-   ```
+2. Configure `IAMHUMAN_BASE_URL` for the backend endpoint used during build:
+    ```bash
+    export IAMHUMAN_BASE_URL=https://effective-winner-97vgw4grp963p5xp-4000.app.github.dev
+    ```
+    You can also pass it directly to Gradle:
+    ```bash
+    ./gradlew assembleDebug -PIAMHUMAN_BASE_URL=https://effective-winner-97vgw4grp963p5xp-4000.app.github.dev
+    ```
 3. Sync Gradle and build the project.
 4. Run on an emulator or physical device (minSdk 24 / Android 7.0+).
 
@@ -141,9 +199,11 @@ Splash → Onboarding (3 slides) → Email Entry → OTP Verify
 
 ```bash
 cd android
-./gradlew assembleDebug
+./build-debug.sh
 # APK: android/app/build/outputs/apk/debug/app-debug.apk
 ```
+
+`build-debug.sh` pins JDK 21 in this dev container for deterministic builds.
 
 ---
 
@@ -233,7 +293,32 @@ The API automatically creates the following tables when `npm run db:migrate` is 
 1. **Start PostgreSQL** with a database named `iamhuman`
 2. **Start API**: `cd apps/api && npm run db:migrate && npm run dev`
 3. **Start Admin Web**: `cd apps/web && npm run dev`
-4. **Run Android App** on emulator pointing to `http://10.0.2.2:4000`
+4. **Run Android App** pointing to `https://effective-winner-97vgw4grp963p5xp-4000.app.github.dev`
+
+### Deterministic One-Command Local Stack
+
+Use the helper scripts from repo root:
+
+```bash
+./scripts/dev-up.sh
+./scripts/dev-status.sh
+./scripts/dev-test.sh
+./scripts/dev-logs.sh api
+./scripts/dev-logs.sh web
+./scripts/dev-down.sh
+./scripts/dev-reset.sh
+# Optional: also stop PostgreSQL container
+./scripts/dev-down.sh --with-db
+./scripts/dev-reset.sh --with-db
+# Optional: remove DB container and .run/ files
+./scripts/dev-reset.sh --purge
+```
+
+`dev-up.sh` ensures PostgreSQL is running (Docker), creates `apps/api/.env` from `.env.example` when missing, runs DB migration, then starts API and web servers with logs in `.run/`.
+
+`dev-test.sh` runs deterministic build validation across API, web, and Android (app + SDK).
+
+CI runs the same deterministic validation via `.github/workflows/deterministic-validate.yml`.
 
 ---
 

@@ -64,7 +64,7 @@ fun AppNavGraph() {
                 api = api,
                 tokenStore = tokenStore,
                 onVerified = {
-                    navController.navigate(Screen.Proof.route) {
+                    navController.navigate(Screen.Selfie.route) {
                         popUpTo(Screen.Onboarding.route) { inclusive = true }
                     }
                 }

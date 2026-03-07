@@ -18,11 +18,18 @@ export default function Login({ onLogin }: Props) {
       const res = await fetch('/admin/users', {
         headers: { 'x-admin-key': key },
       });
+      if (res.ok) {
+        onLogin(key);
+        return;
+      }
+
       if (res.status === 403) {
         setError('Invalid admin key');
-      } else {
-        onLogin(key);
+        return;
       }
+
+      const body = await res.json().catch(() => ({}));
+      setError((body as { error?: string }).error ?? `Request failed (${res.status})`);
     } catch {
       setError('Connection error – is the API running?');
     } finally {

@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -15,8 +16,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.iamhuman.app.data.api.ApiService
 import com.iamhuman.app.data.local.TokenStore
+import com.iamhuman.app.data.models.RequestOtpBody
 import com.iamhuman.app.data.models.VerifyOtpBody
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.util.UUID
 
 @Composable
@@ -29,7 +32,9 @@ fun OtpVerifyScreen(
     var otp by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
+    var info by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    val clipboardManager = LocalClipboardManager.current
 
     // Generate or retrieve device ID
     val deviceId = remember {
@@ -77,6 +82,65 @@ fun OtpVerifyScreen(
                     cursorColor = Color(0xFF3D7FFF),
                 ),
             )
+
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                TextButton(
+                    onClick = {
+                        val text = clipboardManager.getText()?.text?.trim().orEmpty()
+                        val digits = text.filter { it.isDigit() }.take(6)
+                        if (digits.length == 6) {
+                            otp = digits
+                            error = ""
+                            info = "Code pasted from clipboard"
+                        } else {
+                            error = "Clipboard does not contain a 6-digit code"
+                        }
+                    },
+                    enabled = !loading,
+                ) {
+                    Text("Paste Code", color = Color(0xFF3D7FFF), fontSize = 13.sp)
+                }
+
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            loading = true
+                            error = ""
+                            info = ""
+                            try {
+                                val resendRes = api.requestOtp(RequestOtpBody(email))
+                                if (resendRes.isSuccessful) {
+                                    info = "A new code was sent"
+                                } else {
+                                    val backendError = try {
+                                        val raw = resendRes.errorBody()?.string().orEmpty()
+                                        if (raw.isBlank()) null else JSONObject(raw).optString("error").ifBlank { null }
+                                    } catch (_: Exception) {
+                                        null
+                                    }
+                                    error = backendError ?: "Failed to resend code"
+                                }
+                            } catch (e: Exception) {
+                                error = "Network error: ${e.message}"
+                            } finally {
+                                loading = false
+                            }
+                        }
+                    },
+                    enabled = !loading,
+                ) {
+                    Text("Resend Code", color = Color(0xFF3D7FFF), fontSize = 13.sp)
+                }
+            }
+
+            if (info.isNotBlank()) {
+                Text(info, color = Color(0xFF7FC18A), fontSize = 13.sp)
+            }
+
             if (error.isNotBlank()) {
                 Spacer(Modifier.height(8.dp))
                 Text(error, color = Color(0xFFFF4466), fontSize = 13.sp)
@@ -91,6 +155,7 @@ fun OtpVerifyScreen(
                     scope.launch {
                         loading = true
                         error = ""
+                        info = ""
                         try {
                             val res = api.verifyOtp(VerifyOtpBody(email, otp, deviceId))
                             if (res.isSuccessful && res.body()?.success == true) {
@@ -100,7 +165,13 @@ fun OtpVerifyScreen(
                                 tokenStore.saveEmail(email)
                                 onVerified()
                             } else {
-                                error = "Invalid or expired code"
+                                val backendError = try {
+                                    val raw = res.errorBody()?.string().orEmpty()
+                                    if (raw.isBlank()) null else JSONObject(raw).optString("error").ifBlank { null }
+                                } catch (_: Exception) {
+                                    null
+                                }
+                                error = backendError ?: "Invalid or expired code"
                             }
                         } catch (e: Exception) {
                             error = "Network error: ${e.message}"

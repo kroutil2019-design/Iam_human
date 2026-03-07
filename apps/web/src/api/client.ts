@@ -9,7 +9,10 @@ export async function apiGet<T>(path: string, adminKey: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: getHeaders(adminKey),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? `HTTP ${res.status}`);
+  }
   return res.json() as Promise<T>;
 }
 

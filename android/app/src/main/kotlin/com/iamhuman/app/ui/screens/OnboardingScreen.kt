@@ -1,6 +1,7 @@
 package com.iamhuman.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -24,6 +25,7 @@ private val slides = listOf(
 )
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 fun OnboardingScreen(onGetStarted: () -> Unit) {
     val pagerState = rememberPagerState(pageCount = { slides.size })
     val scope = rememberCoroutineScope()

@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
 import pool from '../db/pool';
+import { env } from '../config/env';
 
 const router = Router();
 
@@ -10,9 +11,9 @@ const router = Router();
 router.post('/human', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.userId!;
 
-  // Check user is verified_basic and not deleted
+  // Check user is selfie-verified and not deleted.
   const userResult = await pool.query(
-    `SELECT verified_basic, status FROM users WHERE id = $1`,
+    `SELECT verified_basic, selfie_uploaded, status FROM users WHERE id = $1`,
     [userId]
   );
 
@@ -27,17 +28,19 @@ router.post('/human', requireAuth, async (req: AuthenticatedRequest, res: Respon
     return;
   }
 
-  if (!user.verified_basic) {
-    res.status(403).json({ success: false, error: 'User not verified' });
+  if (!user.selfie_uploaded || !user.verified_basic) {
+    res.status(403).json({
+      success: false,
+      error: 'Verification incomplete: upload a selfie to complete human verification',
+    });
     return;
   }
 
-  const expiryDays = parseInt(process.env.HPT_EXPIRY_DAYS ?? '30', 10);
+  const expiryDays = env.hptExpiryDays;
   const expiresAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000);
 
   const tokenId = uuidv4();
-  const secret = process.env.JWT_SECRET ?? '';
-  const tokenValue = jwt.sign({ tokenId, userId }, secret, {
+  const tokenValue = jwt.sign({ tokenId, userId }, env.jwtSecret, {
     expiresIn: `${expiryDays}d`,
   });
 

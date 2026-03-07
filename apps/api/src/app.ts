@@ -7,13 +7,15 @@ import authRouter from './routes/auth';
 import userRouter from './routes/user';
 import proofsRouter from './routes/proofs';
 import adminRouter from './routes/admin';
+import { env } from './config/env';
 
 const app = express();
 
+// Codespaces/public ingress sits behind one proxy hop.
+app.set('trust proxy', 1);
+
 // CORS
-const allowedOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:5173')
-  .split(',')
-  .map((o) => o.trim());
+const allowedOrigins = env.corsOrigins;
 
 app.use(
   cors({
@@ -31,9 +33,12 @@ app.use(
 app.use(express.json());
 
 // Rate limiting
+const isProduction = process.env.NODE_ENV === 'production';
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20,
+  skip: () => !isProduction,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: 'Too many requests, please try again later.' },

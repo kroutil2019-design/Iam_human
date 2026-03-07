@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.sp
 import com.iamhuman.app.data.api.ApiService
 import com.iamhuman.app.data.models.RequestOtpBody
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 @Composable
 fun EmailEntryScreen(api: ApiService, onOtpSent: (String) -> Unit) {
@@ -37,7 +38,14 @@ fun EmailEntryScreen(api: ApiService, onOtpSent: (String) -> Unit) {
                     if (res.isSuccessful) {
                         onOtpSent(email.trim().lowercase())
                     } else {
-                        error = "Failed to send OTP. Please try again."
+                        val backendError = try {
+                            val raw = res.errorBody()?.string().orEmpty()
+                            if (raw.isBlank()) null else JSONObject(raw).optString("error").ifBlank { null }
+                        } catch (_: Exception) {
+                            null
+                        }
+
+                        error = backendError ?: "Failed to send OTP. Please try again."
                     }
                 } catch (e: Exception) {
                     error = "Network error: ${e.message}"

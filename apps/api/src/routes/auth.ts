@@ -1,29 +1,35 @@
 import { Router, Request, Response } from 'express';
 import pool from '../db/pool';
 import jwt from 'jsonwebtoken';
+import { env } from '../config/env';
 
 const router = Router();
 
 // POST /auth/request-otp
 router.post('/request-otp', async (req: Request, res: Response) => {
-  const { email } = req.body as { email?: string };
-  if (!email || typeof email !== 'string' || !email.includes('@')) {
-    res.status(400).json({ success: false, error: 'Valid email required' });
-    return;
+  try {
+    const { email } = req.body as { email?: string };
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      res.status(400).json({ success: false, error: 'Valid email required' });
+      return;
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    await pool.query(
+      `INSERT INTO otps (email, otp_code, expires_at) VALUES ($1, $2, $3)`,
+      [email.toLowerCase().trim(), otp, expiresAt]
+    );
+
+    // Log OTP to console (mock email delivery)
+    console.log(`[OTP] ${email} -> ${otp} (expires ${expiresAt.toISOString()})`);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[OTP] request-otp failed:', error);
+    res.status(500).json({ success: false, error: 'Failed to send OTP' });
   }
-
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-
-  await pool.query(
-    `INSERT INTO otps (email, otp_code, expires_at) VALUES ($1, $2, $3)`,
-    [email.toLowerCase().trim(), otp, expiresAt]
-  );
-
-  // Log OTP to console (mock email delivery)
-  console.log(`[OTP] ${email} → ${otp} (expires ${expiresAt.toISOString()})`);
-
-  res.json({ success: true });
 });
 
 // POST /auth/verify-otp
@@ -70,12 +76,12 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
   // Mark OTP as used
   await pool.query(`UPDATE otps SET used = TRUE WHERE id = $1`, [otpRow.id]);
 
-  // Upsert user
+  // Upsert user. OTP only proves email ownership; human verification is completed after selfie upload.
   const userResult = await pool.query(
-    `INSERT INTO users (email, verified_basic, status)
-     VALUES ($1, TRUE, 'active')
+    `INSERT INTO users (email, status)
+     VALUES ($1, 'active')
      ON CONFLICT (email) DO UPDATE
-       SET verified_basic = TRUE, updated_at = NOW(), status = 'active'
+       SET updated_at = NOW(), status = 'active'
      RETURNING id`,
     [normalizedEmail]
   );
@@ -95,10 +101,8 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
   );
 
   // Issue JWT
-  const secret = process.env.JWT_SECRET ?? '';
-  const jwtExpiry = process.env.JWT_EXPIRY ?? '7d';
-  const authToken = jwt.sign({ userId }, secret, {
-    expiresIn: jwtExpiry,
+  const authToken = jwt.sign({ userId }, env.jwtSecret, {
+    expiresIn: env.jwtExpiry,
   } as jwt.SignOptions);
 
   res.json({ success: true, user_id: userId, auth_token: authToken });

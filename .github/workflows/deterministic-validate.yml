@@ -1,0 +1,65 @@
+name: Deterministic Validate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      skip_android:
+        description: 'Skip Android build steps for a faster manual run'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            apps/api/package-lock.json
+            apps/web/package-lock.json
+
+      - name: Install API dependencies
+        working-directory: apps/api
+        run: npm ci
+
+      - name: Install Web dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Setup Java 21
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.skip_android != true }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.skip_android != true }}
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build dependencies
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.skip_android != true }}
+        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh android/build-debug.sh
+
+      - name: Run deterministic validation
+        run: |
+          if [[ "${{ github.event_name == 'workflow_dispatch' && inputs.skip_android }}" == "true" ]]; then
+            ./scripts/dev-test.sh --skip-android
+          else
+            ./scripts/dev-test.sh
+          fi

@@ -1,0 +1,24 @@
+name: Security Report
+description: Report a potential security vulnerability (private channel required)
+title: "[SECURITY] <short summary>"
+labels:
+  - security
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve security.
+
+        Do not disclose vulnerabilities in public issues.
+        Please use GitHub Private Vulnerability Reporting for this repository:
+        `Security` tab -> `Advisories` -> `Report a vulnerability`.
+
+        This issue form is intentionally informational and should not be used for sensitive details.
+  - type: textarea
+    id: non_sensitive_context
+    attributes:
+      label: Non-sensitive context (optional)
+      description: If needed, provide non-sensitive context only. No exploit details.
+      placeholder: Affected area (e.g., auth middleware), rough severity, and safe context.
+    validations:
+      required: false

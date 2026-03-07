@@ -1,0 +1,16 @@
+# Default owner for all files
+* @kroutil2019-design
+
+# Critical backend auth and middleware
+/apps/api/src/middleware/ @kroutil2019-design
+/apps/api/src/routes/auth.ts @kroutil2019-design
+/apps/api/src/routes/proofs.ts @kroutil2019-design
+
+# Deterministic tooling and CI governance
+/scripts/ @kroutil2019-design
+/.github/workflows/ @kroutil2019-design
+/.github/pull_request_template.md @kroutil2019-design
+/.github/CODEOWNERS @kroutil2019-design
+
+# Android build determinism entrypoint
+/android/build-debug.sh @kroutil2019-design

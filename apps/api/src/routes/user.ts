@@ -46,7 +46,11 @@ router.post(
     );
 
     await pool.query(
-      `UPDATE users SET selfie_uploaded = TRUE, updated_at = NOW() WHERE id = $1`,
+      `UPDATE users
+       SET selfie_uploaded = TRUE,
+           verified_basic = TRUE,
+           updated_at = NOW()
+       WHERE id = $1`,
       [userId]
     );
 

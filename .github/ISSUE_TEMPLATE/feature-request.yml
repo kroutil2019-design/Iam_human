@@ -1,0 +1,49 @@
+name: Feature Request
+description: Propose a new capability with deterministic implementation context
+title: "[FEATURE] <short summary>"
+labels:
+  - enhancement
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Target Area
+      options:
+        - apps/api
+        - apps/web
+        - android/app
+        - android/iamhuman-sdk
+        - scripts/ci-docs
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      placeholder: What user/developer problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      placeholder: Describe proposed behavior and constraints.
+    validations:
+      required: true
+  - type: textarea
+    id: deterministic_scope
+    attributes:
+      label: Deterministic Scope
+      description: List validations required for acceptance.
+      placeholder: |
+        - ./scripts/dev-test.sh --skip-android
+        - ./scripts/pre-pr-check.sh --ci (if Android or release-impacting)
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and Rollback
+      placeholder: Potential risks and rollback approach.
+    validations:
+      required: false

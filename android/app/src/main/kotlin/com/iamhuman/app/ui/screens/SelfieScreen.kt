@@ -64,7 +64,7 @@ fun SelfieScreen(api: ApiService, onDone: () -> Unit) {
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                "Optional – helps confirm you're human.\nYou can skip this step.",
+                "Required to complete verification and unlock your Human Proof Token.",
                 fontSize = 14.sp,
                 color = Color(0xFF8888A0),
                 textAlign = TextAlign.Center,
@@ -139,10 +139,6 @@ fun SelfieScreen(api: ApiService, onDone: () -> Unit) {
             if (error.isNotBlank()) {
                 Spacer(Modifier.height(8.dp))
                 Text(error, color = Color(0xFFFF4466), fontSize = 13.sp)
-            }
-            Spacer(Modifier.height(16.dp))
-            TextButton(onClick = onDone) {
-                Text("Skip for now", color = Color(0xFF8888A0))
             }
         }
     }
