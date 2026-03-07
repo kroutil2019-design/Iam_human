@@ -1,0 +1,60 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+build/
+.cache/
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+apps/web/.env
+apps/api/.env
+
+# Logs
+logs/
+*.log
+*.log.*
+debug.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.iml
+
+# Android
+*.apk
+*.aab
+*.keystore
+*.jks
+local.properties
+.gradle/
+build/
+captures/
+output.json
+
+# Jetpack Compose / Kotlin
+*.hprof
+
+# React / Vite
+apps/web/node_modules/
+apps/web/dist/
+apps/web/.vite/
+
+# Docker
+docker-data/
+docker-volume/
+postgres-data/
+
+# Misc
+*.tmp
+*.swp
+*.swo
