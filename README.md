@@ -12,6 +12,7 @@ From repo root, use the deterministic scripts in this order:
 ./scripts/dev-up.sh
 ./scripts/dev-status.sh
 ./scripts/dev-test.sh
+npm --prefix apps/api run test:enforcement
 ./scripts/dev-down.sh
 ```
 
@@ -318,7 +319,9 @@ Use the helper scripts from repo root:
 
 `dev-test.sh` runs deterministic build validation across API, web, and Android (app + SDK).
 
-CI runs the same deterministic validation via `.github/workflows/deterministic-validate.yml`.
+`npm --prefix apps/api run test:enforcement` validates strict backend enforcement: proof issuance is blocked before selfie upload and allowed after selfie upload.
+
+CI runs deterministic build validation plus the backend enforcement contract via `.github/workflows/deterministic-validate.yml`.
 
 ---
 

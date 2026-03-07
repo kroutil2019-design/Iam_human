@@ -63,3 +63,13 @@ jobs:
           else
             ./scripts/dev-test.sh
           fi
+
+      - name: Start local stack for enforcement contract
+        run: ./scripts/dev-up.sh
+
+      - name: Run backend enforcement contract
+        run: npm --prefix apps/api run test:enforcement
+
+      - name: Stop local stack
+        if: always()
+        run: ./scripts/dev-down.sh --with-db
