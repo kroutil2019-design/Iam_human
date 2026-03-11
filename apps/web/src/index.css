@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap');
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -5,27 +7,71 @@
 }
 
 :root {
-  --bg: #050509;
-  --surface: #0e0e14;
-  --surface2: #1a1a24;
-  --border: #2a2a38;
-  --accent: #3d7fff;
-  --accent-dim: #2a5acc;
-  --text: #e8e8f0;
-  --text-dim: #8888a0;
-  --danger: #ff4466;
-  --success: #44ff99;
-  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --bg: #050608;
+  --bg-mid: #0b0d10;
+  --bg-deep: #020202;
+  --surface: #0f1114;
+  --surface2: #171b1f;
+  --surface-3: #1f252b;
+  --border: #2a3139;
+  --border-bright: #4a5460;
+  --text: #eceef1;
+  --text-dim: #97a0aa;
+  --text-metal: #cdd3d8;
+  --danger: #db4f5f;
+  --success: #5cbf96;
+  --shadow-deep: 0 26px 44px rgba(0, 0, 0, 0.55);
+  --shadow-soft: 0 10px 18px rgba(0, 0, 0, 0.42);
+  --chrome-ramp: linear-gradient(175deg, #3a4149 0%, #151a1f 28%, #080b0e 54%, #262d35 100%);
+  --chrome-ramp-pressed: linear-gradient(175deg, #232931 0%, #0d1013 48%, #1b2026 100%);
+  --panel-ramp: linear-gradient(170deg, rgba(39, 45, 52, 0.75) 0%, rgba(16, 19, 22, 0.82) 38%, rgba(5, 6, 8, 0.9) 100%);
+  --label-metal-ramp: linear-gradient(180deg, #f0f3f5 0%, #aeb8c1 42%, #676f78 100%);
+  font-family: 'Rajdhani', 'Barlow Condensed', 'Segoe UI', sans-serif;
   font-size: 14px;
   color: var(--text);
 }
 
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(1200px 680px at 15% -10%, rgba(182, 197, 209, 0.09), transparent 70%),
+    radial-gradient(980px 560px at 90% 120%, rgba(116, 127, 137, 0.1), transparent 70%),
+    repeating-linear-gradient(
+      112deg,
+      rgba(255, 255, 255, 0.024) 0,
+      rgba(255, 255, 255, 0.024) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    linear-gradient(160deg, var(--bg) 0%, var(--bg-mid) 45%, var(--bg-deep) 100%);
+  background-attachment: fixed;
   min-height: 100vh;
 }
 
-input, button, select {
+input,
+button,
+select {
   font-family: inherit;
   font-size: inherit;
+}
+
+h1,
+h2,
+h3,
+.dash-title,
+.login-title,
+.login-logo,
+.dash-logo {
+  background-image: var(--label-metal-ramp);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.24),
+    0 16px 30px rgba(0, 0, 0, 0.52);
+}
+
+@media (max-width: 768px) {
+  :root {
+    font-size: 13px;
+  }
 }

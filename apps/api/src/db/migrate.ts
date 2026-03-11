@@ -10,7 +10,6 @@ CREATE TABLE IF NOT EXISTS users (
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   verified_basic  BOOLEAN NOT NULL DEFAULT FALSE,
-  selfie_uploaded BOOLEAN NOT NULL DEFAULT FALSE,
   status       TEXT NOT NULL DEFAULT 'active'
 );
 
@@ -18,9 +17,12 @@ CREATE TABLE IF NOT EXISTS devices (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   device_id    TEXT NOT NULL,
+  public_key   TEXT,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS public_key TEXT;
 
 CREATE TABLE IF NOT EXISTS otps (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -42,12 +44,18 @@ CREATE TABLE IF NOT EXISTS human_proofs (
   revoke_reason TEXT
 );
 
-CREATE TABLE IF NOT EXISTS selfies (
+CREATE TABLE IF NOT EXISTS auth_challenges (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  file_path  TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  public_key TEXT NOT NULL,
+  nonce      TEXT UNIQUE NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used       BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  used_at    TIMESTAMPTZ
 );
+
+DROP TABLE IF EXISTS selfies;
 `;
 
 async function migrate() {

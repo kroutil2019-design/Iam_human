@@ -7,7 +7,7 @@ plugins {
 val configuredBaseUrl = (
     (project.findProperty("IAMHUMAN_BASE_URL") as String?)
         ?: System.getenv("IAMHUMAN_BASE_URL")
-    ?: "https://effective-winner-97vgw4grpj963p5xp-4000.app.github.dev"
+    ?: "http://10.0.2.2:4000"
 ).trimEnd('/')
 
 android {
@@ -22,6 +22,7 @@ android {
         versionName = "1.0.0"
 
         buildConfigField("String", "BASE_URL", "\"$configuredBaseUrl\"")
+        buildConfigField("String", "API_BASE_URL", "\"$configuredBaseUrl\"")
     }
 
     buildTypes {

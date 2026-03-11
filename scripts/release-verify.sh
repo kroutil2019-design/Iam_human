@@ -6,6 +6,7 @@ API_ENV="$ROOT_DIR/apps/api/.env"
 FULL=false
 DRY_RUN=false
 STARTED_STACK=false
+API_PORT="4000"
 
 usage() {
   echo "Usage: ./scripts/release-verify.sh [--full] [--dry-run]"
@@ -55,6 +56,15 @@ require_file() {
   fi
 }
 
+resolve_api_port() {
+  require_file "$API_ENV"
+  local configured
+  configured="$(grep -E '^PORT=' "$API_ENV" | tail -n1 | cut -d'=' -f2- | tr -d '[:space:]')"
+  if [[ -n "$configured" ]]; then
+    API_PORT="$configured"
+  fi
+}
+
 check_changelog() {
   require_file "$ROOT_DIR/CHANGELOG.md"
   if ! grep -q "## \[Unreleased\]" "$ROOT_DIR/CHANGELOG.md"; then
@@ -88,7 +98,7 @@ check_api_env_required_vars() {
 }
 
 ensure_stack_running() {
-  if curl -fsS -m 5 http://localhost:4000/health >/dev/null 2>&1; then
+  if curl -fsS -m 5 "http://localhost:${API_PORT}/health" >/dev/null 2>&1; then
     echo "[release-verify] API already running"
     return
   fi
@@ -106,11 +116,11 @@ runtime_sanity_checks() {
     exit 1
   fi
 
-  run_cmd "Health check" curl -fsS -m 5 http://localhost:4000/health
+  run_cmd "Health check" curl -fsS -m 5 "http://localhost:${API_PORT}/health"
 
   local bad_status ok_status
-  bad_status="$(curl -s -o /tmp/release_admin_bad.json -w '%{http_code}' -H 'x-admin-key: wrong' http://localhost:4000/admin/users)"
-  ok_status="$(curl -s -o /tmp/release_admin_ok.json -w '%{http_code}' -H "x-admin-key: $admin_key" http://localhost:4000/admin/users)"
+  bad_status="$(curl -s -o /tmp/release_admin_bad.json -w '%{http_code}' -H 'x-admin-key: wrong' "http://localhost:${API_PORT}/admin/users")"
+  ok_status="$(curl -s -o /tmp/release_admin_ok.json -w '%{http_code}' -H "x-admin-key: $admin_key" "http://localhost:${API_PORT}/admin/users")"
 
   if [[ "$bad_status" != "403" ]]; then
     echo "[release-verify] Expected 403 for invalid admin key, got $bad_status" >&2
@@ -136,6 +146,7 @@ trap cleanup EXIT
 run_cmd "Check governance files" check_governance_files
 run_cmd "Check changelog" check_changelog
 run_cmd "Check required API env vars" check_api_env_required_vars
+run_cmd "Resolve API port" resolve_api_port
 
 if [[ "$FULL" == "true" ]]; then
   run_cmd "Run CI-parity deterministic validation" "$ROOT_DIR/scripts/pre-pr-check.sh" --ci

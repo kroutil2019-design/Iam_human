@@ -68,7 +68,7 @@ jobs:
         run: ./scripts/dev-up.sh
 
       - name: Run backend enforcement contract
-        run: npm --prefix apps/api run test:enforcement
+        run: ./scripts/run-enforcement-if-ready.sh --require-ready
 
       - name: Stop local stack
         if: always()

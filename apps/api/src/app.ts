@@ -1,12 +1,12 @@
 import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
-import path from 'path';
 import rateLimit from 'express-rate-limit';
 
 import authRouter from './routes/auth';
 import userRouter from './routes/user';
 import proofsRouter from './routes/proofs';
 import adminRouter from './routes/admin';
+import actionsRouter from './routes/actions';
 import { env } from './config/env';
 
 const app = express();
@@ -52,14 +52,12 @@ const generalLimiter = rateLimit({
   message: { success: false, error: 'Too many requests, please try again later.' },
 });
 
-// Static uploads (selfies)
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
-
 // Routes
 app.use('/auth', authLimiter, authRouter);
 app.use('/user', generalLimiter, userRouter);
 app.use('/proofs', generalLimiter, proofsRouter);
 app.use('/admin', generalLimiter, adminRouter);
+app.use('/actions', generalLimiter, actionsRouter);
 
 // Health check
 app.get('/health', (_req, res) => {

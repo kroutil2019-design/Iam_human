@@ -18,6 +18,7 @@ import com.iamhuman.app.data.api.ApiService
 import com.iamhuman.app.data.local.TokenStore
 import com.iamhuman.app.data.models.RequestOtpBody
 import com.iamhuman.app.data.models.VerifyOtpBody
+import com.iamhuman.app.data.security.DeviceKeyManager
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.util.UUID
@@ -27,6 +28,7 @@ fun OtpVerifyScreen(
     email: String,
     api: ApiService,
     tokenStore: TokenStore,
+    deviceKeyManager: DeviceKeyManager,
     onVerified: () -> Unit,
 ) {
     var otp by remember { mutableStateOf("") }
@@ -157,7 +159,8 @@ fun OtpVerifyScreen(
                         error = ""
                         info = ""
                         try {
-                            val res = api.verifyOtp(VerifyOtpBody(email, otp, deviceId))
+                            val publicKey = deviceKeyManager.publicKeyBase64()
+                            val res = api.verifyOtp(VerifyOtpBody(email, otp, deviceId, publicKey))
                             if (res.isSuccessful && res.body()?.success == true) {
                                 val body = res.body()!!
                                 tokenStore.saveAuthToken(body.authToken)

@@ -5,11 +5,11 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val BgColor = Color(0xFF050509)
-private val SurfaceColor = Color(0xFF0E0E14)
-private val AccentBlue = Color(0xFF3D7FFF)
-private val TextColor = Color(0xFFE8E8F0)
-private val TextDim = Color(0xFF8888A0)
+private val BgColor = Color(0xFF050608)
+private val SurfaceColor = Color(0xFF13171C)
+private val AccentBlue = Color(0xFF6F7A86)
+private val TextColor = Color(0xFFECEEF1)
+private val TextDim = Color(0xFF97A0AA)
 
 private val DarkColorScheme = darkColorScheme(
     primary = AccentBlue,

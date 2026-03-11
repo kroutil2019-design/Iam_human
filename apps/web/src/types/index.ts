@@ -3,7 +3,6 @@ export interface User {
   email: string;
   created_at: string;
   verified_basic: boolean;
-  selfie_uploaded: boolean;
   status: string;
 }
 

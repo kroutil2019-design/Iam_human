@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { User, Proof } from '../types';
 import { apiGet, apiPost } from '../api/client';
+import {
+  ActionIndexSnapshot,
+  EMPTY_ACTION_INDEX,
+  fetchActionIndex,
+  topEntries,
+} from './action-index.ts';
 import './Dashboard.css';
 
 interface Props {
@@ -14,13 +20,13 @@ export default function Dashboard({ adminKey, onLogout }: Props) {
   const [proofs, setProofs] = useState<Proof[]>([]);
   const [statusFilter, setStatusFilter] = useState('all');
   const [verificationFilter, setVerificationFilter] = useState('all');
+  const [actionIndex, setActionIndex] = useState<ActionIndexSnapshot>(EMPTY_ACTION_INDEX);
+  const [actionIndexError, setActionIndexError] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const getVerificationState = (user: User): 'incomplete' | 'email_only' | 'selfie_verified' => {
-    if (user.selfie_uploaded && user.verified_basic) return 'selfie_verified';
-    if (user.verified_basic && !user.selfie_uploaded) return 'email_only';
-    return 'incomplete';
+  const getVerificationState = (user: User): 'verified' | 'unverified' => {
+    return user.verified_basic ? 'verified' : 'unverified';
   };
 
   const loadUsers = async () => {
@@ -54,6 +60,32 @@ export default function Dashboard({ adminKey, onLogout }: Props) {
     else loadProofs();
   }, [tab]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadActionIndex = async () => {
+      try {
+        const snapshot = await fetchActionIndex(adminKey);
+        if (!cancelled) {
+          setActionIndex(snapshot);
+          setActionIndexError('');
+        }
+      } catch {
+        if (!cancelled) {
+          setActionIndexError('Unable to load trust-fabric index');
+        }
+      }
+    };
+
+    loadActionIndex();
+    const interval = window.setInterval(loadActionIndex, 10000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [adminKey]);
+
   const revokeProof = async (tokenId: string) => {
     const reason = prompt('Revoke reason:');
     if (!reason) return;
@@ -72,6 +104,9 @@ export default function Dashboard({ adminKey, onLogout }: Props) {
     verificationFilter === 'all'
       ? users
       : users.filter((u) => getVerificationState(u) === verificationFilter);
+
+  const topIntents = topEntries(actionIndex.byIntent);
+  const topFailureReasons = topEntries(actionIndex.byFailureReason);
 
   return (
     <div className="dashboard">
@@ -100,6 +135,70 @@ export default function Dashboard({ adminKey, onLogout }: Props) {
         </button>
       </div>
 
+      <section className="index-card" aria-label="Trust fabric action index">
+        <div className="index-card-header">
+          <h2 className="index-title">Trust Fabric Index</h2>
+          {actionIndexError && <span className="index-error">{actionIndexError}</span>}
+        </div>
+
+        <div className="index-metrics-grid">
+          <div className="index-metric">
+            <span className="index-label">Total Received</span>
+            <strong className="index-value">{actionIndex.totals.received}</strong>
+          </div>
+          <div className="index-metric">
+            <span className="index-label">Total Passed</span>
+            <strong className="index-value">{actionIndex.totals.passed}</strong>
+          </div>
+          <div className="index-metric">
+            <span className="index-label">Total Failed</span>
+            <strong className="index-value">{actionIndex.totals.failed}</strong>
+          </div>
+          <div className="index-metric">
+            <span className="index-label">Polarity +</span>
+            <strong className="index-value">{actionIndex.totals.polarityPositive}</strong>
+          </div>
+          <div className="index-metric">
+            <span className="index-label">Polarity -</span>
+            <strong className="index-value">{actionIndex.totals.polarityNegative}</strong>
+          </div>
+        </div>
+
+        <div className="index-lists">
+          <div className="index-list-block">
+            <h3 className="index-subtitle">Top Intents</h3>
+            {topIntents.length === 0 ? (
+              <p className="index-empty">No intent activity yet</p>
+            ) : (
+              <ul className="index-list">
+                {topIntents.map(([intent, count]) => (
+                  <li key={intent}>
+                    <span className="index-item-label">{intent}</span>
+                    <span className="index-item-value">{count}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="index-list-block">
+            <h3 className="index-subtitle">Top Failure Reasons</h3>
+            {topFailureReasons.length === 0 ? (
+              <p className="index-empty">No failures recorded</p>
+            ) : (
+              <ul className="index-list">
+                {topFailureReasons.map(([reason, count]) => (
+                  <li key={reason}>
+                    <span className="index-item-label">{reason}</span>
+                    <span className="index-item-value">{count}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </section>
+
       {error && <div className="dash-error">{error}</div>}
       {loading && <div className="dash-loading">Loading…</div>}
 
@@ -113,9 +212,8 @@ export default function Dashboard({ adminKey, onLogout }: Props) {
               onChange={(e) => setVerificationFilter(e.target.value)}
             >
               <option value="all">All</option>
-              <option value="selfie_verified">Selfie Verified</option>
-              <option value="email_only">Email Only</option>
-              <option value="incomplete">Incomplete</option>
+              <option value="verified">Verified</option>
+              <option value="unverified">Unverified</option>
             </select>
           </div>
           <div className="table-wrapper">
@@ -125,20 +223,13 @@ export default function Dashboard({ adminKey, onLogout }: Props) {
                 <th>Email</th>
                 <th>Status</th>
                 <th>Verification</th>
-                <th>Email</th>
-                <th>Selfie</th>
                 <th>Created</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.map((u) => {
                 const verificationState = getVerificationState(u);
-                const verificationLabel =
-                  verificationState === 'selfie_verified'
-                    ? 'Selfie Verified'
-                    : verificationState === 'email_only'
-                      ? 'Email Only'
-                      : 'Incomplete';
+                const verificationLabel = verificationState === 'verified' ? 'Verified' : 'Unverified';
 
                 return (
                 <tr key={u.id}>
@@ -149,15 +240,13 @@ export default function Dashboard({ adminKey, onLogout }: Props) {
                   <td>
                     <span className={`badge badge-${verificationState}`}>{verificationLabel}</span>
                   </td>
-                  <td>{u.verified_basic ? '✓' : '—'}</td>
-                  <td>{u.selfie_uploaded ? '✓' : '—'}</td>
                   <td>{new Date(u.created_at).toLocaleString()}</td>
                 </tr>
                 );
               })}
               {filteredUsers.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="empty-cell">No users found</td>
+                  <td colSpan={4} className="empty-cell">No users found</td>
                 </tr>
               )}
             </tbody>

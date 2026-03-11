@@ -36,12 +36,12 @@ import org.json.JSONObject
 fun ProofScreen(
     api: ApiService,
     onSettings: () -> Unit,
-    onSelfie: () -> Unit,
+    onVerifyDevice: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var proof by remember { mutableStateOf<ProofData?>(null) }
-    var selfieUploaded by remember { mutableStateOf(false) }
+    var deviceVerified by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     var toastMsg by remember { mutableStateOf("") }
@@ -57,7 +57,7 @@ fun ProofScreen(
 
                 val meRes = api.getMe()
                 if (meRes.isSuccessful) {
-                    selfieUploaded = meRes.body()?.user?.selfieUploaded == true
+                    deviceVerified = meRes.body()?.user?.verifiedBasic == true
                 }
             } catch (e: Exception) {
                 error = "Network error: ${e.message}"
@@ -135,7 +135,7 @@ fun ProofScreen(
                 )
             } else {
                 NotVerifiedCard(
-                    selfieUploaded = selfieUploaded,
+                    deviceVerified = deviceVerified,
                     onRefresh = { loadProof() },
                     onIssue = {
                         scope.launch {
@@ -150,7 +150,7 @@ fun ProofScreen(
                                     } catch (_: Exception) {
                                         null
                                     }
-                                    error = backendError ?: "Verification incomplete. Upload a selfie first."
+                                    error = backendError ?: "Verification incomplete. Verify this device first."
                                 }
                             } catch (e: Exception) {
                                 error = "Error: ${e.message}"
@@ -159,7 +159,7 @@ fun ProofScreen(
                             }
                         }
                     },
-                    onSelfie = onSelfie,
+                    onVerifyDevice = onVerifyDevice,
                 )
             }
 
@@ -263,10 +263,10 @@ private fun VerifiedCard(
 
 @Composable
 private fun NotVerifiedCard(
-    selfieUploaded: Boolean,
+    deviceVerified: Boolean,
     onRefresh: () -> Unit,
     onIssue: () -> Unit,
-    onSelfie: () -> Unit,
+    onVerifyDevice: () -> Unit,
 ) {
     Surface(
         shape = RoundedCornerShape(20.dp),
@@ -287,17 +287,17 @@ private fun NotVerifiedCard(
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                if (selfieUploaded) {
-                    "Selfie uploaded. Issue your Human Proof Token."
+                if (deviceVerified) {
+                    "Device verified. Issue your Human Proof Token."
                 } else {
-                    "Upload a selfie to complete\nhuman verification"
+                    "Complete deterministic device\nverification first"
                 },
                 fontSize = 14.sp,
                 color = Color(0xFF8888A0),
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(24.dp))
-            if (selfieUploaded) {
+            if (deviceVerified) {
                 Button(
                     onClick = onIssue,
                     modifier = Modifier.fillMaxWidth(),
@@ -307,11 +307,11 @@ private fun NotVerifiedCard(
                 }
             } else {
                 OutlinedButton(
-                    onClick = onSelfie,
+                    onClick = onVerifyDevice,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF3D7FFF)),
                 ) {
-                    Text("Upload Selfie")
+                    Text("Verify Device")
                 }
             }
             Spacer(Modifier.height(8.dp))

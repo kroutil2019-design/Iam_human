@@ -7,11 +7,22 @@ API_DIR="$ROOT_DIR/apps/api"
 WEB_DIR="$ROOT_DIR/apps/web"
 DB_CONTAINER="iamhuman-postgres"
 DB_IMAGE="postgres:14"
+API_PORT="4000"
 
 mkdir -p "$RUN_DIR"
 
+resolve_api_port() {
+  if [[ -f "$API_DIR/.env" ]]; then
+    local configured
+    configured="$(grep -E '^PORT=' "$API_DIR/.env" | tail -n1 | cut -d'=' -f2- | tr -d '[:space:]')"
+    if [[ -n "$configured" ]]; then
+      API_PORT="$configured"
+    fi
+  fi
+}
+
 is_api_healthy() {
-  curl -fsS -m 3 http://localhost:4000/health >/dev/null 2>&1
+  curl -fsS -m 3 "http://localhost:${API_PORT}/health" >/dev/null 2>&1
 }
 
 wait_for_api() {
@@ -82,7 +93,7 @@ ensure_api_port_available() {
   fi
 
   local listeners
-  listeners="$(lsof -t -i :4000 -sTCP:LISTEN 2>/dev/null || true)"
+  listeners="$(lsof -t -i :"$API_PORT" -sTCP:LISTEN 2>/dev/null || true)"
   if [[ -z "$listeners" ]]; then
     return
   fi
@@ -92,7 +103,7 @@ ensure_api_port_available() {
     if [[ -n "$tracked_pid" && "$pid" == "$tracked_pid" ]]; then
       continue
     fi
-    echo "[dev-up] Killing stale process on :4000 (pid=$pid)"
+    echo "[dev-up] Killing stale process on :$API_PORT (pid=$pid)"
     kill -9 "$pid" 2>/dev/null || true
   done <<< "$listeners"
 }
@@ -130,6 +141,7 @@ start_process() {
 
 ensure_postgres
 ensure_api_env
+resolve_api_port
 ensure_api_port_available
 run_migration
 start_process "api" "npm run dev" "$API_DIR"

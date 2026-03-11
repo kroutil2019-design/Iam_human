@@ -12,7 +12,7 @@ From repo root, use the deterministic scripts in this order:
 ./scripts/dev-up.sh
 ./scripts/dev-status.sh
 ./scripts/dev-test.sh
-npm --prefix apps/api run test:enforcement
+./scripts/run-enforcement-if-ready.sh --require-ready
 ./scripts/dev-down.sh
 ```
 
@@ -22,6 +22,8 @@ Before opening a PR, run:
 ./scripts/pre-pr-check.sh --fast
 # or CI-parity scope
 ./scripts/pre-pr-check.sh --ci
+# or CI-parity + backend enforcement contract
+./scripts/pre-pr-check.sh --ci-enforcement
 ```
 
 For faster local checks (skip Android build):
@@ -143,6 +145,54 @@ OTP codes are logged to the console (no real email is sent in development).
 | GET | `/admin/users` | `x-admin-key` header | List all users |
 | GET | `/admin/proofs` | `x-admin-key` header | List all proofs |
 | POST | `/admin/proofs/invalidate` | `x-admin-key` header | Revoke a proof |
+
+#### Actions
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/actions/execute` | None | Deterministic action execution envelope |
+| GET | `/actions/index` | None | In-memory trust-fabric action index snapshot |
+
+### Action Contract
+
+`POST /actions/execute` response envelope:
+
+```json
+{
+    "status": "pass" | "fail",
+    "polarity": "+" | "-",
+    "eventHash": "string",
+    "output": {},
+    "reason": "string"
+}
+```
+
+Notes:
+- `eventHash` is always returned.
+- `output` is present only when `status` is `pass`.
+- `reason` is present on failures.
+
+`GET /actions/index` returns:
+
+```json
+{
+    "totals": {
+        "received": 0,
+        "configurationBuilt": 0,
+        "zGateValidated": 0,
+        "constraintEvaluated": 0,
+        "passed": 0,
+        "failed": 0,
+        "polarityPositive": 0,
+        "polarityNegative": 0,
+        "executionStarted": 0,
+        "executionCompleted": 0,
+        "executionFailed": 0
+    },
+    "byIntent": {},
+    "byCapability": {},
+    "byFailureReason": {}
+}
+```
 
 ---
 
