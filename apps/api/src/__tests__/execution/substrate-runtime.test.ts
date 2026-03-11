@@ -1,8 +1,47 @@
+import { generateKeyPairSync, sign } from 'crypto';
 import { SubstrateRuntime } from '../../substrate/substrate-runtime';
 import { ActionRequest } from '../../execution/models';
+import { createCanonicalRequest, createRequestEventHash } from '../../substrate/trust-proof';
+import { stableStringify } from '../../substrate/canonicalization';
 
 describe('substrate-runtime', () => {
   const runtime = new SubstrateRuntime();
+  const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+  const actorPublicKey = publicKey.export({ format: 'der', type: 'spki' }).toString('base64');
+
+  function withValidTrustProof(request: ActionRequest): ActionRequest {
+    const requestWithPublicKey: ActionRequest = {
+      ...request,
+      device: {
+        ...request.device,
+        publicKey: request.device.publicKey ?? actorPublicKey,
+      },
+      payload: {
+        ...request.payload,
+      },
+    };
+
+    const canonicalRequest = createCanonicalRequest(requestWithPublicKey);
+    const eventHash = createRequestEventHash(requestWithPublicKey);
+    const capabilityScope = [...(requestWithPublicKey.capability.permissions ?? [])].sort((a, b) =>
+      a.localeCompare(b)
+    );
+    const message = `${eventHash}:${stableStringify(capabilityScope)}`;
+    const actorSignature = sign(null, Buffer.from(message, 'utf8'), privateKey).toString('base64');
+
+    return {
+      ...requestWithPublicKey,
+      payload: {
+        ...requestWithPublicKey.payload,
+        trustProof: {
+          eventHash,
+          actorSignature,
+          capabilityScope,
+          canonicalRequest,
+        },
+      },
+    };
+  }
 
   beforeEach(() => {
     runtime.resetState();
@@ -19,11 +58,12 @@ describe('substrate-runtime', () => {
         capability: { permissions: ['auth:challenge'] },
         payload: { publicKey: 'pk-123' },
       };
+      const signedRequest = withValidTrustProof(request);
 
       jest.useFakeTimers({ now: new Date('2026-03-11T00:00:00.000Z') });
 
-      const result1 = runtime.run(request);
-      const result2 = runtime.run(request);
+      const result1 = runtime.run(signedRequest);
+      const result2 = runtime.run(signedRequest);
 
       jest.useRealTimers();
 
@@ -51,12 +91,13 @@ describe('substrate-runtime', () => {
         capability: { permissions: ['proof:verify'] },
         payload: { token: 'tok-xyz' },
       };
+      const signedRequest = withValidTrustProof(request);
 
       jest.useFakeTimers({ now: new Date('2026-03-11T12:00:00.000Z') });
 
-      const result1 = runtime.run(request);
-      const result2 = runtime.run(request);
-      const result3 = runtime.run(request);
+      const result1 = runtime.run(signedRequest);
+      const result2 = runtime.run(signedRequest);
+      const result3 = runtime.run(signedRequest);
 
       jest.useRealTimers();
 
@@ -94,11 +135,12 @@ describe('substrate-runtime', () => {
           },
         },
       };
+      const signedRequest = withValidTrustProof(request);
 
       jest.useFakeTimers({ now: new Date('2026-03-11T06:30:00.000Z') });
 
-      const result1 = runtime.run(request);
-      const result2 = runtime.run(request);
+      const result1 = runtime.run(signedRequest);
+      const result2 = runtime.run(signedRequest);
 
       jest.useRealTimers();
 
@@ -117,11 +159,12 @@ describe('substrate-runtime', () => {
         capability: { permissions: ['auth:challenge'] },
         payload: {},
       };
+      const signedRequest = withValidTrustProof(request);
 
       jest.useFakeTimers({ now: new Date('2026-03-11T00:00:00.000Z') });
 
-      const result1 = runtime.run(request);
-      const result2 = runtime.run(request);
+      const result1 = runtime.run(signedRequest);
+      const result2 = runtime.run(signedRequest);
 
       jest.useRealTimers();
 
@@ -146,16 +189,17 @@ describe('substrate-runtime', () => {
         capability: { permissions: ['auth:challenge'] },
         payload: { data: 'test' },
       };
+      const signedRequest = withValidTrustProof(request);
 
       jest.useFakeTimers({ now: new Date('2026-03-11T00:00:00.000Z') });
 
-      const result1 = runtime.run(request);
+      const result1 = runtime.run(signedRequest);
 
       // Reset state
       runtime.resetState();
 
       // Run same request again
-      const result2 = runtime.run(request);
+      const result2 = runtime.run(signedRequest);
 
       jest.useRealTimers();
 
@@ -175,8 +219,9 @@ describe('substrate-runtime', () => {
         capability: { permissions: ['auth:challenge'] },
         payload: {},
       };
+      const signedRequest = withValidTrustProof(request);
 
-      const result = runtime.run(request);
+      const result = runtime.run(signedRequest);
 
       // Event hash should be 64-character hex (SHA256)
       expect(result.eventHash).toMatch(/^[a-f0-9]{64}$/);
@@ -209,11 +254,13 @@ describe('substrate-runtime', () => {
         capability: { permissions: ['auth:challenge'] },
         payload: { key: 'value' },
       };
+      const signedRequest1 = withValidTrustProof(request1);
+      const signedRequest2 = withValidTrustProof(request2);
 
       jest.useFakeTimers({ now: new Date('2026-03-11T00:00:00.000Z') });
 
-      const result1 = runtime.run(request1);
-      const result2 = runtime.run(request2);
+      const result1 = runtime.run(signedRequest1);
+      const result2 = runtime.run(signedRequest2);
 
       jest.useRealTimers();
 
@@ -236,11 +283,12 @@ describe('substrate-runtime', () => {
         capability: { permissions: ['auth:challenge'] },
         payload: {},
       };
+      const signedRequest = withValidTrustProof(request);
 
       jest.useFakeTimers({ now: new Date('2026-03-11T00:00:00.000Z') });
 
-      const result1 = runtime.run(request);
-      const result2 = runtime.run(request);
+      const result1 = runtime.run(signedRequest);
+      const result2 = runtime.run(signedRequest);
 
       jest.useRealTimers();
 

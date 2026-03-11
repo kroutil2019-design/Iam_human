@@ -5,9 +5,10 @@
  */
 
 import { ActionRequest } from '../execution/models';
-import { deterministicPipeline, actionIndex } from '../execution';
-import { createEventHash } from './event-hash';
-import { DeterministicState, ExecutionSnapshot } from './deterministic-state';
+import { actionIndex } from '../execution';
+import { DeterministicState } from './deterministic-state';
+import { AttackSurfaceKernel, ExecutionReceipt, globalAttackSurfaceKernel } from './attack-surface-kernel';
+import { ResidualAttackCategory } from './attack-surface-model';
 
 /**
  * Result of a deterministic execution.
@@ -24,6 +25,8 @@ export interface DeterministicResult {
     payload?: Record<string, unknown>;
   };
   error?: string;
+  receipt: ExecutionReceipt;
+  residualRiskCategory?: ResidualAttackCategory;
 }
 
 /**
@@ -32,9 +35,11 @@ export interface DeterministicResult {
  */
 export class SubstrateRuntime {
   private determinismState: DeterministicState;
+  private kernel: AttackSurfaceKernel;
 
-  constructor(determinismState?: DeterministicState) {
+  constructor(determinismState?: DeterministicState, kernel: AttackSurfaceKernel = globalAttackSurfaceKernel) {
     this.determinismState = determinismState || new DeterministicState();
+    this.kernel = kernel;
   }
 
   /**
@@ -43,30 +48,56 @@ export class SubstrateRuntime {
    * (modulo timestamps and other volatile fields).
    */
   run(request: ActionRequest): DeterministicResult {
-    const result = deterministicPipeline.run(request);
-    const eventHash = result.eventHash;
-    const executionId = result.execution.output?.executionId || eventHash.substring(0, 32);
-
-    // Record execution snapshot for determinism tracking
-    if (result.configuration) {
+    const kernelResult = this.kernel.execute(request);
+    if (!kernelResult.success) {
       this.determinismState.recordSnapshot({
-        executionId,
-        eventHash,
-        stage: result.execution.success ? 'executionCompleted' : 'executionFailed',
+        executionId: kernelResult.executionId,
+        eventHash: kernelResult.eventHash,
+        stage: 'validationFailed',
         timestamp: new Date().toISOString(),
-        actorId: result.configuration.identity.actorId,
-        actionType: result.configuration.intent.actionType,
-        result: result.execution.success ? 'success' : 'execution_failed',
-        details: result.execution.output ? (result.execution.output as unknown as Record<string, unknown>) : {},
+        actorId: request.identity.actorId,
+        actionType: request.intent.actionType,
+        result: 'validation_failed',
+        details: {
+          error: kernelResult.error ?? 'Kernel admission rejected execution',
+          residualRiskCategory: kernelResult.residualRiskCategory ?? 'InputAmbiguitySurface',
+          receiptId: kernelResult.receipt.receiptId,
+        },
       });
+
+      return {
+        success: false,
+        eventHash: kernelResult.eventHash,
+        executionId: kernelResult.executionId,
+        error: kernelResult.error ?? 'Kernel admission rejected execution',
+        receipt: kernelResult.receipt,
+        residualRiskCategory: kernelResult.residualRiskCategory,
+      };
     }
 
+    // Record execution snapshot for determinism tracking
+    this.determinismState.recordSnapshot({
+      executionId: kernelResult.executionId,
+      eventHash: kernelResult.eventHash,
+      stage: kernelResult.success ? 'executionCompleted' : 'executionFailed',
+      timestamp: new Date().toISOString(),
+      actorId: request.identity.actorId,
+      actionType: request.intent.actionType,
+      result: kernelResult.success ? 'success' : 'execution_failed',
+      details: {
+        ...(kernelResult.output as unknown as Record<string, unknown>),
+        receiptId: kernelResult.receipt.receiptId,
+      },
+    });
+
     return {
-      success: result.execution.success,
-      eventHash,
-      executionId,
-      output: result.execution.output as any,
-      error: result.execution.error,
+      success: kernelResult.success,
+      eventHash: kernelResult.eventHash,
+      executionId: kernelResult.executionId,
+      output: kernelResult.output,
+      error: kernelResult.error,
+      receipt: kernelResult.receipt,
+      residualRiskCategory: kernelResult.residualRiskCategory,
     };
   }
 

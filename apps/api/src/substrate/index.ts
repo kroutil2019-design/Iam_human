@@ -41,3 +41,31 @@ export {
   DeterministicResult,
   globalSubstrateRuntime,
 } from './substrate-runtime';
+
+export {
+  TrustProof,
+  TrustProofVerificationResult,
+  createCanonicalRequest,
+  createRequestEventHash,
+  verifyTrustProof,
+} from './trust-proof';
+
+export {
+  AttackSurfaceModel,
+  AttackClass,
+  AttackStatus,
+  ResidualAttackCategory,
+  ResidualCategoryDefinition,
+  createAttackSurfaceModel,
+  getAttackSurfaceReductionSummary,
+  assertAttackSurfaceModelIntegrity,
+} from './attack-surface-model';
+
+export {
+  AdmissionDecision,
+  ExecutionReceipt,
+  KernelExecutionResult,
+  KernelExecutionOptions,
+  AttackSurfaceKernel,
+  globalAttackSurfaceKernel,
+} from './attack-surface-kernel';
